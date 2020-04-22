@@ -10,7 +10,7 @@ sh /etc/init.d-posix/10016_iris
 if [ $AUTOCNF = yes ]
 then
 	# EKF2: Vision position and heading
-	param set EKF2_AID_MASK 24
+	param set EKF2_AID_MASK 25
 	param set EKF2_EV_DELAY 5
 
 	# LPE: Vision + baro

@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# @name 3DR Iris Quadrotor SITL (irlock)
+#
+# @type Quadrotor Wide
+#
+
+sh /etc/init.d-posix/10016_iris
+
+if [ $AUTOCNF = yes ]
+then
+	# EKF2 Parameters
+	param set EKF2_AID_MASK 24	# Estimate position and yaw using VIO 
+	param set EKF2_EV_DELAY 5	# Vision Pose delay wrt IMU clocl
+	param set EKF2_HGT_MODE 3	# Use VIO as primary source of height estimation
+fi

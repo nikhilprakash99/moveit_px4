@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- SITL launch Script for simulating an indoor environment -->
+	<!-- with no GPS and visual odometry for localization -->
+
+	<arg name="vehicle" default="iris_gt"/>
+	<arg name="fake_vio" default="true"/>
+
+	<include file="$(find px4_sitl)/launch/sitl.launch">
+		<arg name="vehicle" value="$(arg vehicle)"/>
+	</include>
+
+	<node name="odom_to_pose" type="odom_to_pose.py" pkg="px4_sitl">
+		<remap from="from" to="ground_truth/state"/>
+		<remap from="to" to="/mavros/vision_pose/pose_cov"/>
+	</node>
+
+</launch>
