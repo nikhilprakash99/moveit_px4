@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
   trajectory_msgs
+  mavros_msgs
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions

@@ -58,6 +58,8 @@
   <exec_depend>message_generation</exec_depend>
   <depend>actionlib</depend>
   <depend>trajectory_msgs</depend>
+  <depend>mavros_msgs</depend>
+  <depend>geometry_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
