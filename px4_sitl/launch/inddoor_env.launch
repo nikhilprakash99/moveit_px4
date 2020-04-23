@@ -4,10 +4,10 @@
 	<!-- with no GPS and visual odometry for localization -->
 
 	<arg name="vehicle" default="iris_gt"/>
-	<arg name="fake_vio" default="true"/>
 
 	<include file="$(find px4_sitl)/launch/sitl.launch">
 		<arg name="vehicle" value="$(arg vehicle)"/>
+		<arg name="pluginlists_yaml" value="$(find px4_sitl)/config/$(arg vehicle)/px4_pluginlists.yaml"/>
 	</include>
 
 	<node name="odom_to_pose" type="odom_to_pose.py" pkg="px4_sitl">
