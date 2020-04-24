@@ -17,7 +17,7 @@
 #include <cmath>
 #include <vector>
 
-#define GOAL_THRESHOLD 0.2
+#define GOAL_THRESHOLD 0.2f
 #define PI 3.141592
 
 // typedefs
@@ -47,10 +47,10 @@ public:
 		arming_client = node_.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
     	set_mode_client = node_.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
 
-		ROS_INFO_STREAM("\nController Ready !!!\n");
 		ROS_INFO_STREAM("testing guidance controller");
 
 		runtest();
+		ROS_INFO_STREAM("\nController Ready !!!\n");
 	}
 
 private:
@@ -142,7 +142,13 @@ private:
         	rate.sleep();
     	}
 
-    	copywp(toExecute.points[0],des_wp);
+    	int wp_i = 0; 
+	    int wp_size = toExecute.points.size();
+
+	    geometry_msgs::Transform point=toExecute.points[wp_i].transforms[0];
+		des_wp.pose.position.x = point.translation.x;
+		des_wp.pose.position.y = point.translation.y;
+		des_wp.pose.position.z = point.translation.z;
 
     	//send a few setpoints before starting
 	    for(int i = 100; ros::ok() && i > 0; --i){
@@ -158,13 +164,11 @@ private:
 	    arm_cmd.request.value = true;
 
 	    ros::Time last_request = ros::Time::now();
-
-	    int wp_i = 0; 
-	    int wp_size = toExecute.points.size();
+	    ros::Time last_print = ros::Time::now();
 
 	    while(ros::ok()){
 	        if( current_state.mode != "OFFBOARD" &&
-	            (ros::Time::now() - last_request > ros::Duration(5.0))){
+	            (ros::Time::now() - last_request > ros::Duration(1.0))){
 	            if( set_mode_client.call(offb_set_mode) &&
 	                offb_set_mode.response.mode_sent){
 	                ROS_INFO("Offboard enabled");
@@ -172,7 +176,7 @@ private:
 	            last_request = ros::Time::now();
 	        } else {
 	            if( !current_state.armed &&
-	                (ros::Time::now() - last_request > ros::Duration(5.0))){
+	                (ros::Time::now() - last_request > ros::Duration(1.0))){
 	                if( arming_client.call(arm_cmd) &&
 	                    arm_cmd.response.success){
 	                    ROS_INFO("Vehicle armed");
@@ -181,21 +185,27 @@ private:
 	            }
 	        }
 
-	        local_pos_pub.publish(des_wp);
-
-	        ROS_INFO("Current WP: X:%0.2f  Y: %0.2f Z: %0.2f",des_wp.pose.position.x,des_wp.pose.position.y,des_wp.pose.position.z);
-
+	        if (ros::Time::now() - last_print > ros::Duration(1))
+	        {
+	        	ROS_INFO("Current WP: X:%0.2f  Y: %0.2f Z: %0.2f",des_wp.pose.position.x,des_wp.pose.position.y,des_wp.pose.position.z);
+	        	ROS_INFO("Remaining Distance : %0.2f",dist_to_goal());
+	        	last_print = ros::Time::now();
+	        }
+	       	
 	        if(dist_to_goal() < GOAL_THRESHOLD)
 	        {
-	        	if(ros::Time::now() > toExecute.header.stamp + toExecute.points[wp_i].time_from_start)
+	        	if(++wp_i<wp_size)
 	        	{
-	        		if( ++wp_i < wp_size)
-	        			copywp(toExecute.points[wp_i],des_wp);
-	        		else
-	        			break;
+				    geometry_msgs::Transform point=toExecute.points[wp_i].transforms[0];
+					des_wp.pose.position.x = point.translation.x;
+					des_wp.pose.position.y = point.translation.y;
+					des_wp.pose.position.z = point.translation.z;	        		
 	        	}
+	        	else
+	        		break;
 	        }
 
+	        local_pos_pub.publish(des_wp);
 	        ros::spinOnce();
 	        rate.sleep();
 	    }
@@ -203,17 +213,6 @@ private:
 	    active_goal_.setSucceeded();
 		has_active_goal_=false;
 		created=false;	    
-	}
-
-	void copywp(trajectory_msgs::MultiDOFJointTrajectoryPoint wp, geometry_msgs::PoseStamped& des_wp)
-	{
-		des_wp.pose.position.x = wp.transforms[0].translation.x;
-		des_wp.pose.position.y = wp.transforms[0].translation.y;
-		des_wp.pose.position.z = wp.transforms[0].translation.z;
-		des_wp.pose.orientation.x = wp.transforms[0].rotation.x;
-		des_wp.pose.orientation.y = wp.transforms[0].rotation.y;
-		des_wp.pose.orientation.z = wp.transforms[0].rotation.z;
-		des_wp.pose.orientation.w = wp.transforms[0].rotation.w;
 	}
 
 	double dist_to_goal(){
@@ -234,25 +233,21 @@ private:
 	void runtest(){
 		trajectory_msgs::MultiDOFJointTrajectoryPoint point;
 		geometry_msgs::Transform transform;
-		double raidius = 1;
+		double raidius = 2;
 		double height = 1;
 
 		for ( int i=0;i<200;i++)
 		{
-			transform.translation.x = raidius*sin(6*PI*i/200);
-			transform.translation.y = raidius*sin(6*PI*i/200);
-			transform.translation.z = i*0.1;
+			transform.translation.x = raidius*sin(2*PI*i/100);
+			transform.translation.y = raidius*cos(2*PI*i/100);
+			transform.translation.z = height+i*0.02;
 			point.transforms.push_back(transform);
-			point.time_from_start = ros::Duration(i*0.2);
-
 			toExecute.points.push_back(point);
-
 		}
 
-		toExecute.header.stamp = ros::Time::now()+ros::Duration(1);
 		ROS_INFO("executing Trajectory");
+		executeTrajectory();
 	}
-
 };
 
 int main(int argc, char **argv)
